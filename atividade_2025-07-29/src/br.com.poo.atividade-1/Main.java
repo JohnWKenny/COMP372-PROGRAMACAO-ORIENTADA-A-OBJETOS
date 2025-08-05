@@ -18,15 +18,15 @@ public class Main
 
 		Product product = new Product(name, price, quantity);
 
-		product.TotalValueInStock();
+		System.out.println(product.printProduct());
 		System.out.print("Enter the number of products to be added in stock: ");
 		quantity = sc.nextInt();
 		System.out.println();
-		product.AddProducts(quantity);
+		product.addProducts(quantity);
 		
 		System.out.print("Enter the number of products to be removed from stock: ");
 		quantity = sc.nextInt();
 		System.out.println();
-		product.RemoveProducts(quantity);
+		product.removeProducts(quantity);
 	}
 }
