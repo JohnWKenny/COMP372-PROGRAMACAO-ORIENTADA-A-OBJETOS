@@ -28,5 +28,7 @@ public class Main
 		quantity = sc.nextInt();
 		System.out.println();
 		product.removeProducts(quantity);
+
+		sc.close();
 	}
 }
