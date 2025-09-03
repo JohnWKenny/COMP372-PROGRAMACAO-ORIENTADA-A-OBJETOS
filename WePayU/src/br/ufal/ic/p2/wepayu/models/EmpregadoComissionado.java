@@ -8,6 +8,7 @@ import java.text.DecimalFormatSymbols;
 public class EmpregadoComissionado extends Empregado {
     private String salarioMensal;
     private String taxaDeComissao;
+    private ResultadoDeVenda resultadoDeVenda= new ResultadoDeVenda();
 
     public EmpregadoComissionado(String nome, String endereco, String salario, String taxaDeComissao) throws EmpregadoNaoExisteException {
         super(nome, endereco);

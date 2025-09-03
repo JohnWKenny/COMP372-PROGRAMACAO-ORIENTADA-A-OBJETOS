@@ -7,6 +7,7 @@ import java.text.DecimalFormatSymbols;
 
 public class EmpregadoHorista extends Empregado {
     private String salarioPorHora;
+    private CartãodePonto cartãodePonto = new CartãodePonto();
 
     public EmpregadoHorista(String nome, String endereco, String salario) throws EmpregadoNaoExisteException {
         super(nome, endereco);
