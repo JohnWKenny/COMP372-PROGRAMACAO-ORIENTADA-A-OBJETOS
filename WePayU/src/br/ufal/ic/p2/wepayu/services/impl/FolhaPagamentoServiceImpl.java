@@ -27,13 +27,22 @@ import java.util.ArrayList;
  * <ul>
  *   <li>Cálculo do total da folha de pagamento</li>
  *   <li>Processamento de folha para empregados assalariados</li>
- *   <li>Processamento de folha para empregados horistas</li>
+ *   <li>Processamento de folha para empregados horistas com sistema de dívida sindical</li>
  *   <li>Processamento de folha para empregados comissionados</li>
  *   <li>Geração de arquivos de folha de pagamento</li>
  * </ul>
  * 
+ * <p><strong>Sistema de Dívida Sindical para Horistas:</strong></p>
+ * <p>Os empregados horistas possuem um sistema especial de acumulação de dívida sindical:</p>
+ * <ul>
+ *   <li>A cada pagamento semanal, adiciona-se 7 dias de taxa sindical à dívida</li>
+ *   <li>Os descontos incluem a dívida sindical acumulada + taxas de serviço do período</li>
+ *   <li>Se o salário líquido for negativo, a dívida é ajustada e os descontos limitados ao salário bruto</li>
+ *   <li>Se o empregado consegue pagar toda a dívida, ela é zerada</li>
+ * </ul>
+ * 
  * @author John Wallex
- * @version 1.0
+ * @version 1.1
  * @since 2025
  */
 public class FolhaPagamentoServiceImpl implements FolhaPagamentoService {
@@ -234,12 +243,42 @@ public class FolhaPagamentoServiceImpl implements FolhaPagamentoService {
             // name: 40, horas: 6, extra: 10, salarioBruto: 11, descontos: 15, salarioLiquido: 7, metodo: resto
             for (Empregado empregado : horistas) {
                 EmpregadoHorista horista = (EmpregadoHorista) empregado;
+                
+                // Primeiro: acumula taxa sindical semanal (seguindo a lógica do WePayU - o)
+                if (horista.getSindicato() != null) {
+                    MembroSindicato sindicato = horista.getSindicato();
+                    BigDecimal taxaSemanal = new BigDecimal(String.valueOf(sindicato.getTaxaSindical()))
+                            .multiply(BigDecimal.valueOf(7))
+                            .setScale(2, RoundingMode.DOWN);
+                    BigDecimal dividaAtual = new BigDecimal(String.valueOf(sindicato.getDividaSindical()));
+                    BigDecimal novaDivida = dividaAtual.add(taxaSemanal);
+                    sindicato.setDividaSindical(novaDivida.doubleValue());
+                }
+                
                 BigDecimal salarioBruto = calcularSalarioHorista(horista, dataFolha);
                 BigDecimal descontos = BigDecimal.ZERO;
+                BigDecimal salarioLiquido = BigDecimal.ZERO;
+                
                 if (salarioBruto.compareTo(BigDecimal.ZERO) > 0) {
                     descontos = calcularDescontos(horista, dataFolha);
+                    salarioLiquido = salarioBruto.subtract(descontos);
+                    
+                    // Se o salário líquido for negativo, ajusta os descontos e atualiza a dívida sindical
+                    if (salarioLiquido.compareTo(BigDecimal.ZERO) < 0) {
+                        if (horista.getSindicato() != null) {
+                            MembroSindicato sindicato = horista.getSindicato();
+                            BigDecimal dividaRestante = descontos.subtract(salarioBruto);
+                            sindicato.setDividaSindical(dividaRestante.doubleValue());
+                            descontos = salarioBruto;
+                            salarioLiquido = BigDecimal.ZERO;
+                        }
+                    } else {
+                        // Se conseguiu pagar tudo, zera a dívida sindical
+                        if (horista.getSindicato() != null) {
+                            horista.getSindicato().setDividaSindical(0.0);
+                        }
+                    }
                 }
-                BigDecimal salarioLiquido = salarioBruto.subtract(descontos).max(BigDecimal.ZERO);
 
                 int[] horas = calcularHorasHorista(horista, dataFolha);
                 totalHorasNormais += horas[0];
@@ -365,6 +404,21 @@ public class FolhaPagamentoServiceImpl implements FolhaPagamentoService {
         }
     }
 
+    /**
+     * Calcula os descontos para um empregado baseado em seu tipo.
+     * 
+     * <p>Este método implementa diferentes estratégias de cálculo de descontos
+     * dependendo do tipo do empregado:</p>
+     * <ul>
+     *   <li><strong>Horistas:</strong> Usa sistema de dívida sindical acumulada</li>
+     *   <li><strong>Assalariados:</strong> Taxa sindical mensal + taxas de serviço do mês</li>
+     *   <li><strong>Comissionados:</strong> Taxa sindical quinzenal + taxas de serviço da quinzena</li>
+     * </ul>
+     * 
+     * @param empregado O empregado para calcular os descontos
+     * @param data A data do pagamento
+     * @return O valor total dos descontos para o empregado
+     */
     private BigDecimal calcularDescontos(Empregado empregado, LocalDate data) {
         if (empregado.getSindicato() == null) {
             return BigDecimal.ZERO.setScale(2, RoundingMode.DOWN);
@@ -373,21 +427,20 @@ public class FolhaPagamentoServiceImpl implements FolhaPagamentoService {
         MembroSindicato sindicato = empregado.getSindicato();
         BigDecimal descontos = BigDecimal.ZERO;
 
-        // Dias do período (7, mês ou 14)
-        int diasPeriodo = calcularDiasPeriodo(empregado, data);
-        System.out.println("Dias do período: " + diasPeriodo + " para o empregado " 
-        + empregado.getNome() + " taxa sindical: " + sindicato.getTaxaSindical());
+        // Para horistas, usa a lógica de dívida sindical acumulada
+        if (empregado.getTipo().equals("horista")) {
+            return calcularDescontosHorista(empregado, sindicato, data);
+        }
 
-        // Taxa sindical: taxa diária * diasPeriodo (garantindo BigDecimal desde o início)
+        // Para outros tipos, usa a lógica original
+        int diasPeriodo = calcularDiasPeriodo(empregado, data);
         BigDecimal taxaDiaria = new BigDecimal(String.valueOf(sindicato.getTaxaSindical()));
         BigDecimal taxaSindicalTotal = taxaDiaria.multiply(BigDecimal.valueOf(diasPeriodo))
                 .setScale(2, RoundingMode.DOWN);
         descontos = descontos.add(taxaSindicalTotal);
 
-        // Janela do período (inclui 1 dia a mais no início para pegar taxas na "fronteira")
-        LocalDate inicioPeriodo = data.minusDays(diasPeriodo); // <-- alteração intencional
+        LocalDate inicioPeriodo = data.minusDays(diasPeriodo);
 
-        // Soma taxas de serviço que caem dentro da janela [inicioPeriodo .. data]
         for (TaxaServico taxa : sindicato.getTaxasDeServicos()) {
             LocalDate dataTaxa = LocalDate.parse(taxa.getData(), DateTimeFormatter.ofPattern("d/M/yyyy"));
             if (!dataTaxa.isBefore(inicioPeriodo) && !dataTaxa.isAfter(data)) {
@@ -400,11 +453,46 @@ public class FolhaPagamentoServiceImpl implements FolhaPagamentoService {
         return descontos.setScale(2, RoundingMode.DOWN);
     }
 
+    /**
+     * Calcula os descontos específicos para empregados horistas.
+     * 
+     * <p>Para horistas, os descontos incluem:</p>
+     * <ul>
+     *   <li>Dívida sindical acumulada (gerenciada pelo sistema de dívida)</li>
+     *   <li>Taxas de serviço do período atual (última semana)</li>
+     * </ul>
+     * 
+     * @param empregado O empregado horista
+     * @param sindicato O membro do sindicato associado
+     * @param data A data do pagamento
+     * @return O valor total dos descontos para o horista
+     */
+    private BigDecimal calcularDescontosHorista(Empregado empregado, MembroSindicato sindicato, LocalDate data) {
+        // Calcula taxas de serviço do período (última semana)
+        LocalDate inicioSemana = data.minusDays(6);
+        BigDecimal taxasServico = BigDecimal.ZERO;
+        
+        for (TaxaServico taxa : sindicato.getTaxasDeServicos()) {
+            LocalDate dataTaxa = LocalDate.parse(taxa.getData(), DateTimeFormatter.ofPattern("d/M/yyyy"));
+            if (!dataTaxa.isBefore(inicioSemana) && !dataTaxa.isAfter(data)) {
+                BigDecimal valorTaxa = new BigDecimal(String.valueOf(taxa.getValor()))
+                        .setScale(2, RoundingMode.DOWN);
+                taxasServico = taxasServico.add(valorTaxa);
+            }
+        }
+        
+        // Total de descontos = dívida sindical atual + taxas de serviço
+        BigDecimal dividaAtual = new BigDecimal(String.valueOf(sindicato.getDividaSindical()));
+        BigDecimal totalDescontos = dividaAtual.add(taxasServico);
+        
+        return totalDescontos.setScale(2, RoundingMode.DOWN);
+    }
+
 
     private int calcularDiasPeriodo(Empregado empregado, LocalDate data) {
         switch (empregado.getTipo()) {
             case "horista":
-                return 7; // semana
+                return calcularDiasPeriodoHorista(empregado, data);
             case "assalariado":
                 return data.lengthOfMonth(); // mês completo
             case "comissionado":
@@ -414,6 +502,45 @@ public class FolhaPagamentoServiceImpl implements FolhaPagamentoService {
         }
     }
 
+    private int calcularDiasPeriodoHorista(Empregado empregado, LocalDate data) {
+        // Horistas são pagos toda sexta-feira
+        // Calcula quantas semanas se passaram desde o último pagamento
+        
+        // Primeiro pagamento dos horistas é em 7/1/2005
+        LocalDate primeiroPagamento = LocalDate.of(2005, 1, 7);
+        
+        if (data.isBefore(primeiroPagamento)) {
+            return 0;
+        }
+        
+        // Calcula o último pagamento (última sexta-feira antes da data atual)
+        LocalDate ultimoPagamento = calcularUltimoPagamentoHorista(data);
+        
+        // Calcula quantas semanas se passaram desde o último pagamento
+        long diasEntre = ChronoUnit.DAYS.between(ultimoPagamento, data);
+        
+        // Para horistas, cada semana corresponde a 7 dias de taxa sindical
+        // Calcula quantas semanas completas se passaram
+        int semanas = (int) (diasEntre / 7);
+        
+        return semanas * 7;
+    }
+    
+    private LocalDate calcularUltimoPagamentoHorista(LocalDate data) {
+        // Primeiro pagamento dos horistas é em 7/1/2005
+        LocalDate primeiroPagamento = LocalDate.of(2005, 1, 7);
+        
+        if (data.isBefore(primeiroPagamento)) {
+            return primeiroPagamento;
+        }
+        
+        // Calcula quantas semanas se passaram desde o primeiro pagamento
+        long diasEntre = ChronoUnit.DAYS.between(primeiroPagamento, data);
+        int semanas = (int) (diasEntre / 7);
+        
+        // Retorna a data do último pagamento (semanas * 7 dias após o primeiro pagamento)
+        return primeiroPagamento.plusDays(semanas * 7);
+    }
     private int[] calcularHorasHorista(EmpregadoHorista empregado, LocalDate data) {
         LocalDate inicioSemana = data.minusDays(6);
         int horasNormais = 0;

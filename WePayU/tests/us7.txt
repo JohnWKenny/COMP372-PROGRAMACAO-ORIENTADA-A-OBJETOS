@@ -14,13 +14,13 @@
 # tipos de empregados recebem com periodicidade diferente (mensal, quinzenal, semanal, e ainda podem ser criadas outras,
 # como voces verao nos proximos milestones). Portanto, agora, em vez de valores como 30 ou 40 reais, voces verao 1 ou
 # 1,20 reais. Cada vez que um empregado recebe, nao importa em que dia, ele tem deduzido o valor correspondente das taxas
-# sindicais desde o ultimo pagamento (ex.: com taxa sindical de 1 real, assalariado paga 31 reais em janeiro, 28 em 
+# sindicais desde o ultimo pagamento (ex.: com taxa sindical de 1 real, assalariado paga 31 reais em janeiro, 28 em
 # fevereiro, etc.; horista paga 7 reais a cada semana, comissionado paga 14 a cada quinzena)
-# 
+#
 # Obs. 1: horista nao pode ter contracheque negativo; se trabalhou durante o periodo menos do que o necessario para pagar
 # a taxa sindical, no dia que deveria receber, a folha vem zerada, e o debito com o sindicato e diminuido do valor que ele
 # receberia (isso nao esta testado, mas se preparem, porque podemos colocar nos testes extra)
-# 
+#
 # Obs. 2: as taxas extra sao pontuais e cobradas sempre no proximo pagamento, valendo a mesma regra anterior de que nao
 # pode haver contracheque negativo
 
@@ -32,9 +32,9 @@
 
 # ESCLARECIMENTO SOBRE PAGAMENTO QUINZENAL DE COMISSIONADOS
 # O "quinzenal" nao se refere a segunda semana do mes, e sim a periodicidade  de 15 em 15 dias a partir do dia de contrato.
-# Coincidentemente, o dia 1/1/2005 e um sabado, o que faz o primeiro pagamento do comissionado cair exatamente na 
-# sexta-feira, mas o primeiro pagamento deve ser feito na sexta-feira da segunda semana de trabalho, e de 15 em 15 dias 
-# a partir dai. 
+# Coincidentemente, o dia 1/1/2005 e um sabado, o que faz o primeiro pagamento do comissionado cair exatamente na
+# sexta-feira, mas o primeiro pagamento deve ser feito na sexta-feira da segunda semana de trabalho, e de 15 em 15 dias
+# a partir dai.
 # Assim, como o ano tem 52 semanas, havera 26 pagamentos, e nao 24. Consequentemente, o salario base do comissionado e
 # calculado como salario*12/52.
 
