@@ -42,6 +42,7 @@ public class EmpregadoHorista extends Empregado {
     public EmpregadoHorista(String nome, String endereco, double salario) {
         super(nome, endereco);
         this.salarioPorHora = salario;
+        this.setAgendaPagamento(AgendaPagamento.getAgendaPadrao("horista"));
     }
 
     /**

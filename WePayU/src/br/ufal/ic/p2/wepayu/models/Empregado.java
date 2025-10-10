@@ -25,7 +25,8 @@ public abstract class Empregado {
     private String nome;
     private String endereco;
     private MembroSindicato sindicato;
-    private MetodoPagamento metodoPagamento = new EmMaos();;
+    private MetodoPagamento metodoPagamento = new EmMaos();
+    private AgendaPagamento agendaPagamento;
 
     /**
      * Construtor padrão da classe Empregado.
@@ -41,6 +42,7 @@ public abstract class Empregado {
     public Empregado(String nome, String endereco) {
         setNome(nome);
         setEndereco(endereco);
+        this.agendaPagamento = new AgendaPagamento();
     }
 
     /**
@@ -218,5 +220,32 @@ public abstract class Empregado {
      */
     public final void setSindicato(MembroSindicato sindicato) {
         this.sindicato = sindicato;
+    }
+    
+    /**
+     * Obtém a agenda de pagamento do empregado.
+     * 
+     * @return Agenda de pagamento do empregado
+     */
+    public final AgendaPagamento getAgendaPagamento() {
+        return agendaPagamento;
+    }
+    
+    /**
+     * Define a agenda de pagamento do empregado.
+     * 
+     * @param agendaPagamento Nova agenda de pagamento
+     */
+    public final void setAgendaPagamento(AgendaPagamento agendaPagamento) {
+        this.agendaPagamento = agendaPagamento;
+    }
+    
+    /**
+     * Define a agenda de pagamento do empregado por string.
+     * 
+     * @param agenda String representando a agenda de pagamento
+     */
+    public final void setAgendaPagamento(String agenda) {
+        this.agendaPagamento = new AgendaPagamento(agenda);
     }
 }

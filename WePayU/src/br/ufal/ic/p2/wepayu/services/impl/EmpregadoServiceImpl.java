@@ -275,6 +275,8 @@ public class EmpregadoServiceImpl implements EmpregadoService {
                     return String.valueOf(((EmpregadoComissionado) empregado).getTaxaDeComissao()).replace('.', ',');
                 }
                 throw new br.ufal.ic.p2.wepayu.Exception.EmpregadoNaoEhComissionadoException("Empregado nao eh comissionado.");
+            case "agendaPagamento":
+                return empregado.getAgendaPagamento().getAgenda();
             default:
                 throw new AtributoNaoExisteException("Atributo nao existe.");
         }

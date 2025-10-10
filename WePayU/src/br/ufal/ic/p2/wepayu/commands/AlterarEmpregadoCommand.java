@@ -16,6 +16,7 @@ import br.ufal.ic.p2.wepayu.Exception.ContaCorrenteNaoPodeSerNulaException;
 import br.ufal.ic.p2.wepayu.Exception.ValorDeveSerTrueOuFalseException;
 import br.ufal.ic.p2.wepayu.Exception.IdentificacaoSindicatoNaoPodeSerNulaException;
 import br.ufal.ic.p2.wepayu.Exception.TaxaSindicalNaoPodeSerNulaException;
+import br.ufal.ic.p2.wepayu.Exception.AgendaPagamentoInvalidaException;
 import br.ufal.ic.p2.wepayu.models.Empregado;
 import br.ufal.ic.p2.wepayu.models.MembroSindicato;
 import br.ufal.ic.p2.wepayu.models.MetodoPagamento;
@@ -81,6 +82,8 @@ public class AlterarEmpregadoCommand implements Command {
             aplicarAlteracao(empregado, atributo, valores);
         } catch (EmpregadoNaoEncontradoException e) {
             throw e;
+        } catch (AgendaPagamentoInvalidaException e) {
+            throw new RuntimeException(e.getMessage());
         } catch (Exception e) {
             throw new ErroAlteracaoEmpregadoException(e.getMessage());
         }
@@ -137,12 +140,14 @@ public class AlterarEmpregadoCommand implements Command {
                     return ((br.ufal.ic.p2.wepayu.models.Banco) empregado.getMetodoPagamento()).getContaCorrente();
                 }
                 return null;
+            case "agendaPagamento":
+                return empregado.getAgendaPagamento();
             default:
                 return null;
         }
     }
     
-    private void aplicarAlteracao(Empregado empregado, String atributo, Map<String, String> valores) {
+    private void aplicarAlteracao(Empregado empregado, String atributo, Map<String, String> valores) throws AgendaPagamentoInvalidaException {
         String valor = valores.get("valor");
         String valor1 = valores.get("valor1");
         
@@ -340,6 +345,19 @@ public class AlterarEmpregadoCommand implements Command {
                     empregado.setMetodoPagamento(metodoEmMaos);
                 }
                 break;
+            case "agendaPagamento":
+                // Validação da agenda de pagamento
+                if (valor == null || valor.isBlank()) {
+                    throw new br.ufal.ic.p2.wepayu.Exception.AtributoNaoPodeSerNuloException("Agenda de pagamento nao pode ser nula.");
+                }
+                
+                // Verifica se a agenda é válida
+                if (!br.ufal.ic.p2.wepayu.models.AgendaPagamento.isAgendaValida(valor)) {
+                    throw new AgendaPagamentoInvalidaException("Agenda de pagamento nao esta disponivel");
+                }
+                
+                empregado.setAgendaPagamento(valor);
+                break;
             default:
                 throw new AtributoNaoExisteException("Atributo nao existe.");
         }
@@ -409,6 +427,9 @@ public class AlterarEmpregadoCommand implements Command {
                 if (empregado.getMetodoPagamento() instanceof br.ufal.ic.p2.wepayu.models.Banco) {
                     ((br.ufal.ic.p2.wepayu.models.Banco) empregado.getMetodoPagamento()).setContaCorrente((String) valorAnterior);
                 }
+                break;
+            case "agendaPagamento":
+                empregado.setAgendaPagamento((br.ufal.ic.p2.wepayu.models.AgendaPagamento) valorAnterior);
                 break;
         }
     }

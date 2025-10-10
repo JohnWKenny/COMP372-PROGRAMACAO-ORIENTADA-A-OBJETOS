@@ -44,6 +44,7 @@ public class EmpregadoComissionado extends Empregado {
         super(nome, endereco);
         this.salarioMensal = salario;
         this.taxaDeComissao = taxaDeComissao;
+        this.setAgendaPagamento(AgendaPagamento.getAgendaPadrao("comissionado"));
     }
 
     /**

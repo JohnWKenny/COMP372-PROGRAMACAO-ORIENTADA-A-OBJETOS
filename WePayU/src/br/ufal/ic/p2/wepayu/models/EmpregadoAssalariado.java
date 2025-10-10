@@ -37,6 +37,7 @@ public class EmpregadoAssalariado extends Empregado {
     public EmpregadoAssalariado(String nome, String endereco, double salario){
         super(nome, endereco);
         setSalarioMensal(salario);
+        this.setAgendaPagamento(AgendaPagamento.getAgendaPadrao("assalariado"));
     }
 
     /**

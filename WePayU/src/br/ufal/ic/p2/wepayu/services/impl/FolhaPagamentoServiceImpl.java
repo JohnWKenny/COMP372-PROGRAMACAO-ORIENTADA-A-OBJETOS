@@ -114,18 +114,9 @@ public class FolhaPagamentoServiceImpl implements FolhaPagamentoService {
     }
 
     private boolean deveReceberNaData(Empregado empregado, LocalDate data) {
-        String tipo = empregado.getTipo();
-
-        switch (tipo) {
-            case "horista":
-                return deveReceberHorista((EmpregadoHorista) empregado, data);
-            case "assalariado":
-                return deveReceberAssalariado(data);
-            case "comissionado":
-                return deveReceberComissionado(data);
-            default:
-                return false;
-        }
+        // Usa a agenda de pagamento do empregado
+        String dataString = data.format(DateTimeFormatter.ofPattern("d/M/yyyy"));
+        return empregado.getAgendaPagamento().devePagarNaData(dataString);
     }
 
     private boolean deveReceberHorista(EmpregadoHorista empregado, LocalDate data) {
@@ -153,16 +144,46 @@ public class FolhaPagamentoServiceImpl implements FolhaPagamentoService {
 
     private BigDecimal calcularSalario(Empregado empregado, LocalDate data) {
         String tipo = empregado.getTipo();
-
-        switch (tipo) {
-            case "horista":
-                return calcularSalarioHorista((EmpregadoHorista) empregado, data);
-            case "assalariado":
-                return calcularSalarioAssalariado((EmpregadoAssalariado) empregado, data);
-            case "comissionado":
-                return calcularSalarioComissionado((EmpregadoComissionado) empregado, data);
+        String agenda = empregado.getAgendaPagamento().getAgenda();
+        
+        // Se a agenda é a padrão para o tipo, usa o cálculo original
+        if (agenda.equals(br.ufal.ic.p2.wepayu.models.AgendaPagamento.getAgendaPadrao(tipo))) {
+            switch (tipo) {
+                case "horista":
+                    return calcularSalarioHorista((EmpregadoHorista) empregado, data);
+                case "assalariado":
+                    return calcularSalarioAssalariado((EmpregadoAssalariado) empregado, data);
+                case "comissionado":
+                    return calcularSalarioComissionado((EmpregadoComissionado) empregado, data);
+                default:
+                    return BigDecimal.ZERO;
+            }
+        } else {
+            // Para agendas não-padrão, usa o novo cálculo
+            String dataString = data.format(DateTimeFormatter.ofPattern("d/M/yyyy"));
+            String dataInicial = calcularDataInicialPeriodo(empregado, data);
+            String dataFinal = dataString;
+            
+            double valorPagamento = empregado.getAgendaPagamento().calcularValorPagamento(empregado, dataInicial, dataFinal);
+            return BigDecimal.valueOf(valorPagamento);
+        }
+    }
+    
+    private String calcularDataInicialPeriodo(Empregado empregado, LocalDate data) {
+        String agenda = empregado.getAgendaPagamento().getAgenda();
+        
+        switch (agenda) {
+            case "semanal 5":
+                // Período de 1 semana
+                return data.minusDays(6).format(DateTimeFormatter.ofPattern("d/M/yyyy"));
+            case "semanal 2 5":
+                // Período de 2 semanas
+                return data.minusDays(13).format(DateTimeFormatter.ofPattern("d/M/yyyy"));
+            case "mensal $":
+                // Período de 1 mês
+                return data.withDayOfMonth(1).format(DateTimeFormatter.ofPattern("d/M/yyyy"));
             default:
-                return BigDecimal.ZERO;
+                return data.minusDays(6).format(DateTimeFormatter.ofPattern("d/M/yyyy"));
         }
     }
 
