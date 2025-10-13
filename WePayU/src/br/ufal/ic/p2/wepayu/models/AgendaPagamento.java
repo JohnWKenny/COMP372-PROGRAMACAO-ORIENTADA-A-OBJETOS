@@ -69,7 +69,7 @@ public class AgendaPagamento {
      * Verifica se uma agenda é válida.
      * 
      * <p>Uma agenda é considerada válida se estiver entre as agendas
-     * disponíveis no sistema.</p>
+     * disponíveis no sistema (padrão ou customizadas).</p>
      * 
      * @param agenda Agenda a ser verificada
      * @return true se a agenda for válida, false caso contrário
@@ -77,7 +77,8 @@ public class AgendaPagamento {
     public static boolean isAgendaValida(String agenda) {
         return SEMANAL_5.equals(agenda) || 
                SEMANAL_2_5.equals(agenda) || 
-               MENSAL_DOLAR.equals(agenda);
+               MENSAL_DOLAR.equals(agenda) ||
+               AgendaDePagamentos.isAgendaValida(agenda);
     }
     
     /**
@@ -106,6 +107,24 @@ public class AgendaPagamento {
      * @return true se deve pagar na data, false caso contrário
      */
     public boolean devePagarNaData(String data) {
+        try {
+            // Se é uma agenda padrão, usa o cálculo original
+            if (SEMANAL_5.equals(agenda) || SEMANAL_2_5.equals(agenda) || MENSAL_DOLAR.equals(agenda)) {
+                return devePagarNaDataPadrao(data);
+            } else {
+                // Se é uma agenda customizada, delega para AgendaDePagamentos
+                AgendaDePagamentos agendaCustomizada = AgendaDePagamentos.getAgenda(agenda);
+                if (agendaCustomizada != null) {
+                    return agendaCustomizada.devePagarNaData(data);
+                }
+                return false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    private boolean devePagarNaDataPadrao(String data) {
         try {
             String[] partes = data.split("/");
             int dia = Integer.parseInt(partes[0]);
@@ -154,6 +173,20 @@ public class AgendaPagamento {
      * @return Valor a ser pago
      */
     public double calcularValorPagamento(Empregado empregado, String dataInicial, String dataFinal) {
+        // Se é uma agenda padrão, usa o cálculo original
+        if (SEMANAL_5.equals(agenda) || SEMANAL_2_5.equals(agenda) || MENSAL_DOLAR.equals(agenda)) {
+            return calcularValorPagamentoPadrao(empregado, dataInicial, dataFinal);
+        } else {
+            // Se é uma agenda customizada, delega para AgendaDePagamentos
+            AgendaDePagamentos agendaCustomizada = AgendaDePagamentos.getAgenda(agenda);
+            if (agendaCustomizada != null) {
+                return agendaCustomizada.calcularValorPagamento(empregado, dataInicial, dataFinal);
+            }
+            return 0.0;
+        }
+    }
+    
+    private double calcularValorPagamentoPadrao(Empregado empregado, String dataInicial, String dataFinal) {
         String tipo = empregado.getTipo();
         
         switch (agenda) {

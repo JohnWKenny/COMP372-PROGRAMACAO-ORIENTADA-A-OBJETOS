@@ -635,4 +635,28 @@ public class Facade {
     public void redo() throws Exception {
         commandManager.redo();
     }
+
+    // ========== OPERAÇÕES DE AGENDAS DE PAGAMENTO ==========
+
+    /**
+     * Cria uma nova agenda de pagamento customizada.
+     * 
+     * <p>Este método permite criar agendas de pagamento personalizadas
+     * além das três agendas padrão do sistema.</p>
+     * 
+     * <p>Formatos suportados:</p>
+     * <ul>
+     *   <li><strong>semanal X:</strong> Pagamento semanal em um dia específico (1-7)</li>
+     *   <li><strong>semanal X Y:</strong> Pagamento a cada X semanas (1-52) em um dia específico (1-7)</li>
+     *   <li><strong>mensal X:</strong> Pagamento mensal em um dia específico (1-28)</li>
+     *   <li><strong>mensal $:</strong> Pagamento mensal no último dia do mês</li>
+     * </ul>
+     * 
+     * @param descricao Descrição da agenda no formato "tipo parametros"
+     * @throws IllegalArgumentException Se a descrição for inválida ou a agenda já existir
+     */
+    public void criarAgendaDePagamentos(String descricao) throws IllegalArgumentException {
+        br.ufal.ic.p2.wepayu.models.AgendaDePagamentos.criarAgenda(descricao);
+        salvarSistema(); // Salva automaticamente após criar agenda
+    }
 }

@@ -34,6 +34,7 @@ public class PersistenciaServiceImpl implements PersistenciaService {
     
     private static final String FILE_EMPREGADOS = "empregados.xml";
     private static final String FILE_SINDICATO = "sindicato.xml";
+    private static final String FILE_AGENDAS = "agendas.xml";
     
     public PersistenciaServiceImpl(Map<String, Empregado> empregados, 
                                    Map<String, MembroSindicato> membrosSindicato, 
@@ -57,10 +58,42 @@ public class PersistenciaServiceImpl implements PersistenciaService {
         } catch (Exception e) {
             System.err.println("Erro ao salvar membros do sindicato: " + e.getMessage());
         }
+
+        try (XMLEncoder encoder = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(FILE_AGENDAS)))) {
+            // Salva apenas as descrições das agendas customizadas
+            java.util.Set<String> descricoesAgendas = new java.util.HashSet<>();
+            for (br.ufal.ic.p2.wepayu.models.AgendaDePagamentos agenda : br.ufal.ic.p2.wepayu.models.AgendaDePagamentos.getAgendasCustomizadas().values()) {
+                descricoesAgendas.add(agenda.getDescricao());
+            }
+            encoder.writeObject(descricoesAgendas);
+        } catch (Exception e) {
+            System.err.println("Erro ao salvar agendas customizadas: " + e.getMessage());
+        }
     }
     
     @Override
     public void carregarSistema() {
+        // PRIMEIRO: Carrega as agendas customizadas
+        File agendas = new File(FILE_AGENDAS);
+        if (agendas.exists()) {
+            try (XMLDecoder decoder = new XMLDecoder(new BufferedInputStream(new FileInputStream(FILE_AGENDAS)))) {
+                @SuppressWarnings("unchecked")
+                java.util.Set<String> descricoesAgendas = (java.util.Set<String>) decoder.readObject();
+                
+                // Restaura as agendas customizadas
+                for (String descricao : descricoesAgendas) {
+                    try {
+                        br.ufal.ic.p2.wepayu.models.AgendaDePagamentos.criarAgenda(descricao);
+                    } catch (Exception e) {
+                        // Agenda já existe ou é inválida, continua
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Erro ao carregar agendas customizadas: " + e.getMessage());
+            }
+        }
+
+        // SEGUNDO: Carrega os empregados
         File emps = new File(FILE_EMPREGADOS);
         if (!emps.exists()) return; // primeira execução, nada salvo
 
@@ -71,6 +104,7 @@ public class PersistenciaServiceImpl implements PersistenciaService {
             System.err.println("Erro ao carregar sistema: " + e.getMessage());
         }
 
+        // TERCEIRO: Carrega os membros do sindicato
         File sin = new File(FILE_SINDICATO);
         if (!sin.exists()) return;
 
@@ -85,6 +119,7 @@ public class PersistenciaServiceImpl implements PersistenciaService {
     public void zerarSistema() {
         empregados.clear();
         membrosSindicato.clear();
+        br.ufal.ic.p2.wepayu.models.AgendaDePagamentos.limparAgendasCustomizadas();
         id = 0;
     }
 

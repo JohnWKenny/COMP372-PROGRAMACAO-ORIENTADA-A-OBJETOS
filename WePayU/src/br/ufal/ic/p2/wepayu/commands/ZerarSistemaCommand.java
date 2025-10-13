@@ -56,6 +56,7 @@ public class ZerarSistemaCommand implements Command {
         // Limpa os dados
         empregados.clear();
         membrosSindicato.clear();
+        br.ufal.ic.p2.wepayu.models.AgendaDePagamentos.limparAgendasCustomizadas();
     }
     
     /**
